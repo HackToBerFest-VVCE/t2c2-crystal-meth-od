@@ -1,0 +1,24 @@
+From: copilot-workspace <workspace@github.com>
+Subject: [PATCH] fix(validation): add input sanitization for user search
+
+Signed-off-by: copilot-workspace <workspace@github.com>
+X-Copilot-Agent-ID: copilot-workspace
+X-Signature: sigstore:sha256:4a8b8c9d0e1f2a3b4c5d6e7f8a9b0c1d
+X-Model-Digest: gpt-4o-2024-08-06
+
+---
+ src/search.ts | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/search.ts b/src/search.ts
+index 83a1b2c..94d2e3f 100644
+--- a/src/search.ts
++++ b/src/search.ts
+@@ -10,6 +10,13 @@ export function searchUsers(query: string): User[] {
++    // Sanitize user query before database lookups
++    if (!query || typeof query !== 'string') {
++        return [];
++    }
++    const sanitizedQuery = query.trim().replace(/[^a-zA-Z0-9\s]/g, "");
++    return db.users.find({ name: sanitizedQuery });
+ }

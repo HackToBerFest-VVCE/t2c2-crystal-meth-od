@@ -1,0 +1,49 @@
+name: "CopilotShield PR Gatekeeper"
+description: "Cryptographic Agent Provenance, Prompt-Injection Defense & Trust Scoring for GitHub Copilot PRs"
+author: "CopilotShield Team"
+
+inputs:
+  min_trust_score:
+    description: "Minimum trust score required to pass (0-100)"
+    required: false
+    default: "80"
+  run_sandbox_tests:
+    description: "Whether to execute automated test suite in sandbox"
+    required: false
+    default: "true"
+  test_cmd:
+    description: "Custom test command (e.g., 'pytest' or 'npm test')"
+    required: false
+    default: ""
+  github_token:
+    description: "GitHub Token for posting audit comments and commit status checks"
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install cryptography
+
+    - name: Run CopilotShield Audit & Post to GitHub
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        git diff origin/${{ github.base_ref }} > current_pr.patch
+        python -m src.cli.copilot_shield_cli scan \
+          --file current_pr.patch \
+          --author "${{ github.event.pull_request.user.login }}@users.noreply.github.com" \
+          --commit-msg "${{ github.event.pull_request.title }} - ${{ github.event.pull_request.body }}" \
+          --repo "${{ github.repository }}" \
+          --pr "${{ github.event.pull_request.number }}" \
+          --commit-sha "${{ github.event.pull_request.head.sha }}"

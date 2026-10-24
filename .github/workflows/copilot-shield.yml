@@ -1,0 +1,31 @@
+name: CopilotShield Security & Provenance Audit
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  audit-agent-pr:
+    name: Verify AI Agent Provenance & Prompt Injection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run CopilotShield Security Engine
+        id: shield
+        run: |
+          git diff origin/${{ github.base_ref }} > current_pr.patch
+          python -m src.cli.copilot_shield_cli scan --file current_pr.patch --author "${{ github.event.pull_request.user.login }}"
