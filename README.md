@@ -31,7 +31,9 @@ As autonomous AI agents and **GitHub Copilot extensions** submit automated code 
 
 ## 🏗️ System Architecture
 
-![CopilotShield Architecture](assets/copilot_shield_architecture.png)
+![CopilotShield System Architecture](assets/copilot_shield_architecture_template.png)
+
+*Halloween Special Edition diagram available at [`assets/copilot_shield_architecture_halloween.png`](assets/copilot_shield_architecture_halloween.png).*
 
 ```mermaid
 flowchart LR
