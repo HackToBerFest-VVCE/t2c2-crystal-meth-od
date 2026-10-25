@@ -24,7 +24,7 @@ from src.scanner.provenance import generate_keypair, sign_diff
 from src.scanner.reputation_db import register_agent, get_agent_reputation
 from src.github.api_client import GitHubClient
 
-ASCII_BANNER = """
+ASCII_BANNER = r"""
    ______            _ __      __  ____  __    _      __    __
   / ____/___  ____  (_) /___  / /_/ __/ / /_  (_)__  / /___/ /
  / /   / __ \/ __ \/ / / __ \/ __/\ \  / __ \/ / _ \/ / __  / 
@@ -59,10 +59,12 @@ def cmd_scan(args):
     print(f"  OVERALL TRUST SCORE: {report['trust_score']} / 100")
     print("="*60)
     print(f"  Provenance: {report['provenance']['status']} (Score: {report['provenance']['confidence_score']})")
+    print(f"  Reputation: {report['reputation']['reputation_level']} (Score: {report['reputation']['reputation_score']})")
     print(f"  Security Status: {'CLEAN' if report['security']['is_safe'] else 'THREATS DETECTED'}")
     print(f"  Prompt Injections: {report['security']['has_prompt_injection']}")
     print(f"  Total Findings: {report['security']['total_issues']}")
     print("="*60)
+
 
     if report['security']['findings']:
         print("\n[!] DETECTED ISSUES:")
@@ -84,7 +86,7 @@ def cmd_scan(args):
             status = "success" if report["decision"] == "PASS" else "failure"
             client.create_commit_status(args.repo, args.commit_sha, status, report["decision_label"])
 
-    if report["decision"] == "BLOCK":
+    if report["decision"] == "BLOCK" or report["trust_score"] < args.min_trust_score:
         sys.exit(1)
 
 def cmd_keygen(args):
@@ -142,6 +144,7 @@ def main():
     p_scan.add_argument("--repo", help="GitHub repo owner/repo for API integration")
     p_scan.add_argument("--pr", help="Pull request number")
     p_scan.add_argument("--commit-sha", help="Commit SHA to set status check")
+    p_scan.add_argument("--min-trust-score", type=int, default=80, help="Minimum trust score (0-100) required to pass")
 
     # keygen
     subparsers.add_parser("keygen", help="Generate real Ed25519 keypair for an agent")

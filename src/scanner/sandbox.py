@@ -6,12 +6,13 @@ Captures genuine return codes, timeouts, and errors.
 
 import subprocess
 import shutil
+import shlex
 import os
 from typing import Dict, Any, Optional
 
 def run_tests_in_sandbox(test_command: Optional[str] = None, working_dir: str = ".", timeout_sec: int = 15) -> Dict[str, Any]:
     """
-    Executes actual test suite or syntax verification.
+    Executes actual test suite or syntax verification safely without shell=True.
     If no custom test_command is given, it looks for pytest, npm test, or python compilation.
     """
     if not test_command:
@@ -26,9 +27,14 @@ def run_tests_in_sandbox(test_command: Optional[str] = None, working_dir: str = 
 
     print(f"[*] Sandbox running test command: '{test_command}' (timeout: {timeout_sec}s)...")
     try:
+        cmd_args = shlex.split(test_command) if isinstance(test_command, str) else list(test_command)
+        resolved_binary = shutil.which(cmd_args[0])
+        if resolved_binary:
+            cmd_args[0] = resolved_binary
+
         proc = subprocess.run(
-            test_command,
-            shell=True,
+            cmd_args,
+            shell=False,
             cwd=working_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

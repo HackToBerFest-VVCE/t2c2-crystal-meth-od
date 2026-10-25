@@ -65,6 +65,13 @@ flowchart LR
 ### 1. Run the Full Red-Team Demonstration
 Runs genuine key generation, legitimate signed PR verification, and all 3 red-team attack scenarios:
 ```bash
+# Install dependencies:
+pip install -r requirements.txt
+
+# Run all 39 comprehensive unit tests:
+pytest tests/test_shield.py
+
+# Run the full end-to-end demonstration:
 python demo/run_demo.py
 ```
 
@@ -78,7 +85,8 @@ python -m src.cli.copilot_shield_cli register-agent \
   --id "my-copilot-agent" \
   --name "My Copilot Agent" \
   --pubkey "<PUBLIC_KEY_BASE64>" \
-  --email "*@myorg.com"
+  --email "my-copilot-agent@users.noreply.github.com"
+
 
 # Sign a diff file:
 python -m src.cli.copilot_shield_cli sign \
@@ -99,3 +107,4 @@ In Copilot Chat, query:
 * `@copilot-shield /agent-reputation copilot-workspace`
 * `@copilot-shield /verify-pr owner/repo#12`
 * `@copilot-shield /scan-diff <code_snippet>`
+* `@copilot-shield /demo`

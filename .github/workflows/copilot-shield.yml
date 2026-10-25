@@ -24,8 +24,40 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run CopilotShield Security Engine
-        id: shield
+      - name: Install Dependencies
         run: |
-          git diff origin/${{ github.base_ref }} > current_pr.patch
-          python -m src.cli.copilot_shield_cli scan --file current_pr.patch --author "${{ github.event.pull_request.user.login }}"
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install cryptography pytest
+          fi
+
+      - name: Run CopilotShield Security Engine (from base branch)
+        id: shield
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.base_ref }}
+          REPO: ${{ github.repository }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # 1. Capture the exact PR diff
+          git diff "origin/$BASE_REF" > current_pr.patch
+          COMMIT_MSG="$PR_TITLE"$'\n\n'"$PR_BODY"
+
+          # 2. Hardening: Ensure the scanner engine runs from the trusted base branch
+          # Prevents a malicious PR from editing src/scanner to weaken its own checks
+          git checkout "origin/$BASE_REF" -- src/
+
+          # 3. Execute authoritative scan
+          python -m src.cli.copilot_shield_cli scan \
+            --file current_pr.patch \
+            --author "$PR_AUTHOR@users.noreply.github.com" \
+            --commit-msg "$COMMIT_MSG" \
+            --repo "$REPO" \
+            --pr "$PR_NUM" \
+            --commit-sha "$COMMIT_SHA"

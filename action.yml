@@ -32,18 +32,45 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install cryptography
+        if [ -f "${{ github.action_path }}/requirements.txt" ]; then
+          pip install -r "${{ github.action_path }}/requirements.txt"
+        else
+          pip install cryptography pytest
+        fi
 
     - name: Run CopilotShield Audit & Post to GitHub
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        PR_BODY: ${{ github.event.pull_request.body }}
+        PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        BASE_REF: ${{ github.base_ref }}
+        REPO: ${{ github.repository }}
+        PR_NUM: ${{ github.event.pull_request.number }}
+        COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        MIN_TRUST_SCORE: ${{ inputs.min_trust_score }}
+        RUN_SANDBOX_TESTS: ${{ inputs.run_sandbox_tests }}
+        TEST_CMD: ${{ inputs.test_cmd }}
       run: |
-        git diff origin/${{ github.base_ref }} > current_pr.patch
-        python -m src.cli.copilot_shield_cli scan \
+        git diff "origin/$BASE_REF" > current_pr.patch
+        COMMIT_MSG="$PR_TITLE"$'\n\n'"$PR_BODY"
+        
+        EXTRA_ARGS=()
+        if [ "$RUN_SANDBOX_TESTS" = "true" ]; then
+          EXTRA_ARGS+=(--run-tests)
+        fi
+        if [ -n "$TEST_CMD" ]; then
+          EXTRA_ARGS+=(--test-cmd "$TEST_CMD")
+        fi
+
+        export PYTHONPATH="${{ github.action_path }}:$PYTHONPATH"
+        python "${{ github.action_path }}/src/cli/copilot_shield_cli.py" scan \
           --file current_pr.patch \
-          --author "${{ github.event.pull_request.user.login }}@users.noreply.github.com" \
-          --commit-msg "${{ github.event.pull_request.title }} - ${{ github.event.pull_request.body }}" \
-          --repo "${{ github.repository }}" \
-          --pr "${{ github.event.pull_request.number }}" \
-          --commit-sha "${{ github.event.pull_request.head.sha }}"
+          --author "$PR_AUTHOR@users.noreply.github.com" \
+          --commit-msg "$COMMIT_MSG" \
+          --repo "$REPO" \
+          --pr "$PR_NUM" \
+          --commit-sha "$COMMIT_SHA" \
+          --min-trust-score "$MIN_TRUST_SCORE" \
+          "${EXTRA_ARGS[@]}"
